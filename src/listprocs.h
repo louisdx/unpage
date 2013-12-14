@@ -5,6 +5,6 @@
 
 std::string getProcessNameByHandle(HANDLE hProcess);
 std::string getProcessNameByID(DWORD processID);
-void        ListProcesses();
+void ListProcesses();
 
 #endif

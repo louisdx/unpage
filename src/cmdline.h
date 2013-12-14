@@ -6,11 +6,15 @@
 class MyOptions
 {
 public:
- MyOptions() : verbose(false), automatic(false), listProcesses(false) {};
+    MyOptions()
+    : verbose(false)
+    , automatic(false)
+    , listProcesses(false)
+    { }
 
-  bool        verbose;
-  bool        automatic;
-  bool        listProcesses;
+    bool verbose;
+    bool automatic;
+    bool listProcesses;
 };
 
 int parseOptions(int argc, char * argv[], MyOptions & options);

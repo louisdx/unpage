@@ -1,7 +1,18 @@
-TARGET = unpage.exe
-LDFLAGS = -s
-CXXFLAGS = -O2
-LIBS = -lpsapi
+TARGET := unpage.exe
+LDFLAGS := -s
+CXXFLAGS := -O2 -W -Wall -Wextra -pedantic -std=c++11
+LIBS := -lpsapi
+ARCHFLAGS := $(ARCHFLAGS)
+
+OBJS := main.o cmdline.o listprocs.o unpage.o
+
+ifdef SystemRoot
+	RM = del /Q
+else
+	ifeq ($(shell uname), Linux)
+		RM = rm -f --
+	endif
+endif
 
 all: $(TARGET)
 
@@ -9,10 +20,10 @@ all: $(TARGET)
 .phony: all clean
 
 clean:
-	rm -rf unpage.exe cmdline.o main.o
+	$(RM) $(OBJS) $(TARGET)
 
-$(TARGET): main.o cmdline.o listprocs.o unpage.o
-	$(CXX) $(LDFLAGS) -o $@ $+ $(LIBS)
+$(TARGET): $(OBJS)
+	$(CXX) $(LDFLAGS) $(ARCHFLAGS) -o $@ $+ $(LIBS)
 
 .cpp.o:
-	$(CXX) $(CXXFLAGS) -c -o $@ $<
+	$(CXX) $(CXXFLAGS) $(ARCHFLAGS) -c -o $@ $<
