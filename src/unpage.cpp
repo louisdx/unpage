@@ -33,9 +33,19 @@ void UnpageProcessByID(DWORD processID, LPVOID MaximumApplicationAddress, DWORD 
 
             if (!VirtualQueryEx(hProcess, reinterpret_cast<LPVOID>(lpMem), &meminfo, sizeof(meminfo)))
             {
-                std::cerr << "Error during VirtualQueryEx(), skipping process ID (error code "
-                          << GetLastError() << ", PID " << processID << ").\n";
-                break;
+                auto e = GetLastError();
+                if (e == ERROR_INVALID_PARAMETER)
+                {
+                    // Error: address above the highest memory address accessible to the process
+                    break;
+                }
+                else
+                {
+                    // Some other error
+                    std::cerr << "Error during VirtualQueryEx(), skipping process ID (error code "
+                              << std::dec << e << ", PID " << processID << ").\n";
+                    break;
+                }
             }
 
             if (meminfo.RegionSize < stepsize)
@@ -43,15 +53,23 @@ void UnpageProcessByID(DWORD processID, LPVOID MaximumApplicationAddress, DWORD 
                 stepsize = meminfo.RegionSize;
             }
 
-            switch(meminfo.State)
+            switch (meminfo.State)
             {
             case MEM_COMMIT:
+            {
                 //fprintf(stderr, "Page at 0x%08X: Good, unpaging.\n", lpMem);
+
+                if (meminfo.Protect & PAGE_GUARD)
+                {
+                    // skip guard page, which is not readable, nor necessary
+                    break;
+                }
 
                 if (0 == ReadProcessMemory(hProcess, reinterpret_cast<LPVOID>(lpMem), &buf, 1, &nbytes))
                 {
                     std::cerr << "Failed to read one byte from 0x" << std::hex << lpMem << ", error "
-                              << std::dec << GetLastError() << " (" << nbytes << " bytes read).\n";
+                              << std::dec << GetLastError() << " (" << nbytes << " bytes read); Protection is 0x"
+                              << std::setfill('0') << std::setw(8) << std::hex << meminfo.Protect << "\n";
                 }
                 else
                 {
@@ -61,17 +79,19 @@ void UnpageProcessByID(DWORD processID, LPVOID MaximumApplicationAddress, DWORD 
                 memsize += stepsize;
 
                 break;
-
+            }
             case MEM_FREE:
+            {
                 // std::fprintf(stderr, "Page at 0x%08X: Free (unused), skipping.\n", lpMem);
                 stepsize = meminfo.RegionSize;
                 break;
-
+            }
             case MEM_RESERVE:
+            {
                 // std::fprintf(stderr, "Page at 0x%08X: Reserved, skipping.\n", lpMem);
                 stepsize = meminfo.RegionSize;
                 break;
-
+            }
             default:
                 std::cerr << "Page at 0x" << std::setfill('0') << std::setw(8) << std::hex << lpMem << ": Unknown state, panic!\n" << std::dec;
             }
